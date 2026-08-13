@@ -328,13 +328,18 @@
   }
 
   @media (max-width: 700px){
-    /* keep the register + savings pill (the animation's payoff); the finer
-       load/measurement callouts crop off-canvas on mobile so stay hidden */
-    .scene .load, .scene .dim-label{ display:none; }
-    /* they render right of the building by default, which clips at the
-       mobile crop edge — shift left of the building into the open ground
-       (translate composes with the elements' own animated transforms) */
+    /* register + savings pill and the survey-scan callouts all render right
+       of the building by default, which clips at the mobile crop edge —
+       mirror them to the left of the building into the open ground
+       (translate composes with each element's own animated transform) */
     .scene .reg-cap, .scene .reg-row, .scene .savings{ translate:-356px 0; }
+    .scene .load-a .leader{ d: path("M1077.12 375 L980 306 H930"); }
+    .scene .load-a text{ text-anchor:end; translate:-294px 0; }
+    .scene .load-b .leader{ d: path("M1052.87 375 L980 346 H930"); }
+    .scene .load-b text{ text-anchor:end; translate:-294px 0; }
+    .scene .load-c .leader{ d: path("M1028.62 375 L980 386 H930"); }
+    .scene .load-c text{ text-anchor:end; translate:-294px 0; }
+    .scene .dim-label{ translate:-300px 0; }
     /* pan the crop toward the site so the building stays in view */
     .scene-holder{ margin-top:0; overflow:hidden; }
     .scene{ width:856px; height:380px; margin-left:calc((100vw - 856px) * .62); }
