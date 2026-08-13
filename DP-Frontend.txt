@@ -1,0 +1,1445 @@
+Chainlift LiftKit Design System Specification - Front End Design Pattern
+44.31 KB •1,440 lines
+•
+Formatting may be inconsistent from source
+
+# Chainlift LiftKit Design System Specification
+
+> A comprehensive reference for implementing the Chainlift design system in React applications. This document is optimized for LLM context to enable accurate code generation.
+
+---
+
+## Table of Contents
+
+1. [Philosophy & Core Principles](#1-philosophy--core-principles)
+2. [The Three Laws of Spacing](#2-the-three-laws-of-spacing)
+3. [Golden Ratio Mathematics](#3-golden-ratio-mathematics)
+4. [CSS Custom Properties Reference](#4-css-custom-properties-reference)
+5. [Typography System](#5-typography-system)
+6. [Spacing System](#6-spacing-system)
+7. [Color System](#7-color-system)
+8. [Component Library](#8-component-library)
+9. [Utility Classes](#9-utility-classes)
+10. [Layout Components](#10-layout-components)
+11. [Code Examples](#11-code-examples)
+12. [Decision Trees](#12-decision-trees)
+
+---
+
+## 1. Philosophy & Core Principles
+
+### What Makes LiftKit Different
+
+LiftKit is a **relative** design system, not an absolute one. Most design systems use:
+- Fixed pixel values (`padding: 16px`)
+- Static breakpoints
+- Hardcoded spacing
+
+LiftKit uses:
+- **Relative units** (`em`, `rem`)
+- **Golden ratio scaling** (φ = 1.618)
+- **Dynamic relationships** between elements
+
+### The Golden Ratio Foundation
+
+Everything in LiftKit derives from φ (phi) = 1.618:
+- Font sizes scale by φ
+- Spacing scales by φ
+- Border radii scale by φ
+- Everything renders in proportion to everything else
+
+### Optical vs Mathematical Symmetry
+
+**Critical Insight**: Mathematical symmetry ≠ perceived symmetry.
+
+Due to how text renders (bounding boxes include line-height whitespace), padding that is mathematically equal will *feel* unequal. LiftKit provides `opticalCorrection` props to compensate.
+
+**The Bounding Box Problem:**
+```
+Text elements have a BOUNDING BOX (the full height including line-height)
+and a RENDERED HEIGHT (the actual pixels of the characters).
+
+Bounding box:    ┌──────────────────┐
+                 │   (whitespace)   │  ← Line-height adds space here
+Rendered text:   │   Heading Text   │  ← Actual character pixels
+                 │   (whitespace)   │  ← And here
+                 └──────────────────┘
+
+When you set padding: 16px on all sides, you're measuring from the
+bounding box edge, NOT the rendered text edge.
+```
+
+**Visual Comparison:**
+```
+MATHEMATICAL (looks wrong):     OPTICAL (looks right):
+┌─────────────────────────┐    ┌─────────────────────────┐
+│                         │    │                         │
+│      16px padding       │    │      12px padding       │  ← LESS top
+│                         │    │                         │
+│   ┌─────────────────┐   │    │   ┌─────────────────┐   │
+│   │  (line-height)  │   │    │   │  (line-height)  │   │
+│   │  Heading Text   │   │    │   │  Heading Text   │   │
+│   │  (line-height)  │   │    │   │  (line-height)  │   │
+│   └─────────────────┘   │    │   └─────────────────┘   │
+│                         │    │                         │
+│      16px padding       │    │      16px padding       │  ← Same bottom
+│                         │    │                         │
+└─────────────────────────┘    └─────────────────────────┘
+
+Result: Top looks heavy         Result: Balanced appearance
+```
+
+**The Formula:**
+```
+optically-corrected-top-padding = font-size / line-height
+
+For title2 (font-size: 1.618em, line-height: 1.272):
+corrected-top = 1.618em / 1.272 ≈ 1.272em
+
+Compare to default padding of 1.618em - that's a significant reduction!
+```
+
+**Why the Eye Notices:**
+The human eye naturally focuses on the **top-left** of a container first. This is where visual weight is highest, so any imbalance is most noticeable there. That's why we correct the top padding most often.
+
+---
+
+## 2. The Three Laws of Spacing
+
+### The Fundamental Question
+
+Consider: *How much space should go between a heading and a paragraph?*
+
+This seems simple, but the answer reveals deep complexity:
+- 1.0 units of spacing? Works.
+- 1.15 units? Also works.
+- 1.25 units? Still acceptable.
+- 2.5 units? Now elements feel disconnected - "absurd"
+
+There exists a **comfort zone** - a range where spacing feels "right." But once you add subheadings, images, action bars, cards with buttons... the spacing decisions multiply exponentially.
+
+With 12 typography styles, you have **66 unique element pairings** to consider. Nobody wants to memorize 66 spacing values.
+
+### Law 1: Every Element is Related
+Every element on screen is related to every other element, even if only by virtue of being in the same viewport.
+
+### Law 2: Some Relationships Are Stronger
+Not all relationships are equal. A heading is more strongly related to its subtitle than to a navigation item.
+
+### Law 3: Stronger Relationships = Closer Elements
+Elements that are more closely related should be physically closer together.
+
+### Practical Application
+
+```
+Relationship Strength → Spacing Size
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Strongest (same unit)  → xs, 2xs
+Strong (parent-child)  → sm
+Medium (siblings)      → md
+Weak (different units) → lg, xl
+Weakest (sections)     → 2xl, 3xl
+```
+
+### The "Larger Element Rule"
+**Always apply spacing from the LARGER text element.** When spacing between a heading and body text, use the heading's spacing scale.
+
+### The Exponential Scale
+The spacing scale is **exponential**, not linear. The difference between `md` and `lg` is larger than between `sm` and `md`.
+
+### Practical Walkthrough: The Employee Handbook
+
+Here's how to apply the Three Laws to a real document:
+
+**Step 1: Identify Relationships**
+Look at your layout and find element pairs:
+- Title + Subtitle → Strongly related (same unit)
+- Heading + Subheading → Strongly related
+- Subheading + Paragraph → ???
+
+**Step 2: Ask the Relationship Question**
+"Is the subtitle more related to the title above or the paragraph below?"
+Answer: It's a *sub*title - belongs with the title. Use tight spacing (xs).
+
+**Step 3: Apply the Larger Element Rule**
+When spacing between elements of different sizes, derive the spacing from the **LARGER** element.
+- Title (display2) + Subtitle (body) → Use display2's spacing scale
+- Heading (title3) + Paragraph (body) → Use title3's spacing scale
+
+**Step 4: Establish Hierarchy (A > B > C)**
+When you have three relationships of different strengths:
+```
+A: Title → Subtitle     (strongest, tightest: xs)
+B: Subtitle → Paragraph (medium: sm)  
+C: Paragraph → New Section (weakest, widest: lg or xl)
+```
+
+**Step 5: Remember the Exponential Scale**
+The jump from `md` to `lg` is LARGER than `sm` to `md`. You don't always need to skip levels - the scale handles perceived differences naturally.
+
+**Result:** What was a chaotic document with inconsistent spacing becomes visually harmonious, with relationships immediately clear to the reader.
+
+---
+
+## 3. Golden Ratio Mathematics
+
+### Why Relative Units? The Accessibility Problem
+
+**The Problem with Fixed Spacing:**
+```
+Designer creates:     Card with 20px spacer blocks
+
+Default browser:      Looks perfect! ✓
+
+User with vision      Text scales up to 24px...
+impairment:           But spacers stay at 20px.
+                      Layout breaks. Proportions lost. ✗
+```
+
+When users change their browser's default font size (for accessibility), fixed pixel spacing doesn't scale. The result: cramped text fighting against tiny gaps, or enormous text with proportionally tiny margins.
+
+**The Solution: Spacing Relative to Font Size**
+```
+Designer creates:     Card with 1.2em spacer blocks
+
+Default browser       16px root → spacing = 19.2px
+(16px):               Looks perfect! ✓
+
+Large font setting    24px root → spacing = 28.8px
+(24px):               STILL looks perfect! ✓
+                      Everything scales proportionally.
+```
+
+This is why LiftKit uses `em` and `rem` units, not pixels.
+
+### Core Constants
+
+```css
+:root {
+  --lk-scalefactor: 1.618;                    /* φ (phi) */
+  --lk-wholestep: 1.618;                      /* = φ */
+  --lk-halfstep: 1.272;                       /* = √φ */
+  --lk-quarterstep: 1.128;                    /* = ⁴√φ */
+  --lk-eighthstep: 1.062;                     /* = ⁸√φ */
+  
+  /* Decimal versions (for subtraction operations) */
+  --lk-wholestep-dec: 0.618;                  /* φ - 1 */
+  --lk-halfstep-dec: 0.272;                   /* √φ - 1 */
+  --lk-quarterstep-dec: 0.128;                /* ⁴√φ - 1 */
+  --lk-eighthstep-dec: 0.062;                 /* ⁸√φ - 1 */
+}
+```
+
+### Step Relationships
+
+| Step Type | Multiplier | Decimal | Use Case |
+|-----------|-----------|---------|----------|
+| Whole | ×1.618 | 1.618 | Major scale jumps |
+| Half | ×1.272 | 1.272 | Medium scale jumps |
+| Quarter | ×1.128 | 1.128 | Fine adjustments |
+| Eighth | ×1.062 | 1.062 | Micro adjustments |
+
+### Formulas
+
+**Font Size Scale:**
+```
+display1 = 1em × φ³         ≈ 4.236em
+display2 = 1em × φ²         ≈ 2.618em  
+title1   = 1em × φ × √φ     ≈ 2.058em
+title2   = 1em × φ          ≈ 1.618em
+title3   = 1em × √φ         ≈ 1.272em
+heading  = 1em × ⁴√φ        ≈ 1.128em
+body     = 1em              = 1.000em
+subhead  = 1em ÷ ⁴√φ        ≈ 0.887em
+callout  = 1em ÷ ⁸√φ        ≈ 0.942em
+label    = 1em ÷ ⁴√φ ÷ ⁸√φ  ≈ 0.835em
+caption  = 1em ÷ √φ         ≈ 0.786em
+```
+
+**Spacing Scale:**
+```
+4xl = 1em × φ⁵  ≈ 11.09em
+3xl = 1em × φ⁴  ≈ 6.854em
+2xl = 1em × φ³  ≈ 4.236em
+xl  = 1em × φ²  ≈ 2.618em
+lg  = 1em × φ   ≈ 1.618em
+md  = 1em       = 1.000em
+sm  = 1em ÷ φ   ≈ 0.618em
+xs  = 1em ÷ φ²  ≈ 0.382em
+2xs = 1em ÷ φ³  ≈ 0.236em
+3xs = 1em ÷ φ⁴  ≈ 0.146em
+```
+
+---
+
+## 4. CSS Custom Properties Reference
+
+### Spacing Variables
+
+```css
+:root {
+  --lk-size-4xl: calc(1em * pow(1.618, 5));   /* ~11.09em */
+  --lk-size-3xl: calc(1em * pow(1.618, 4));   /* ~6.854em */
+  --lk-size-2xl: calc(1em * pow(1.618, 3));   /* ~4.236em */
+  --lk-size-xl:  calc(1em * pow(1.618, 2));   /* ~2.618em */
+  --lk-size-lg:  calc(1em * 1.618);           /* ~1.618em */
+  --lk-size-md:  1em;                          /* 1.000em */
+  --lk-size-sm:  calc(1em / 1.618);           /* ~0.618em */
+  --lk-size-xs:  calc(1em / pow(1.618, 2));   /* ~0.382em */
+  --lk-size-2xs: calc(1em / pow(1.618, 3));   /* ~0.236em */
+  --lk-size-3xs: calc(1em / pow(1.618, 4));   /* ~0.146em */
+}
+```
+
+### Typography Variables
+
+```css
+:root {
+  /* Font Sizes */
+  --display1-font-size: calc(1em * pow(var(--lk-wholestep), 3));
+  --display2-font-size: calc(1em * var(--lk-wholestep) * var(--lk-wholestep));
+  --title1-font-size: calc(1em * var(--lk-wholestep) * var(--lk-halfstep));
+  --title2-font-size: calc(1em * var(--lk-wholestep));
+  --title3-font-size: calc(1em * var(--lk-halfstep));
+  --heading-font-size: calc(1em * var(--lk-quarterstep));
+  --subheading-font-size: calc(1em / var(--lk-quarterstep));
+  --body-font-size: 1em;
+  --callout-font-size: calc(1em / var(--lk-eighthstep));
+  --label-font-size: calc((1em / var(--lk-quarterstep)) / var(--lk-eighthstep));
+  --caption-font-size: calc(1em / var(--lk-halfstep));
+  --capline-font-size: calc(1em / var(--lk-halfstep));
+
+  /* Line Heights (unitless) */
+  --display1-line-height: var(--lk-quarterstep);  /* 1.128 */
+  --display2-line-height: var(--lk-halfstep);     /* 1.272 */
+  --title1-line-height: var(--lk-halfstep);       /* 1.272 */
+  --title2-line-height: var(--lk-halfstep);       /* 1.272 */
+  --title3-line-height: var(--lk-halfstep);       /* 1.272 */
+  --heading-line-height: var(--lk-halfstep);      /* 1.272 */
+  --subheading-line-height: var(--lk-halfstep);   /* 1.272 */
+  --body-line-height: var(--lk-wholestep);        /* 1.618 */
+  --callout-line-height: var(--lk-halfstep);      /* 1.272 */
+  --label-line-height: var(--lk-halfstep);        /* 1.272 */
+  --caption-line-height: var(--lk-halfstep);      /* 1.272 */
+  --capline-line-height: var(--lk-halfstep);      /* 1.272 */
+}
+```
+
+### Optical Correction Offsets
+
+```css
+:root {
+  /* Used for card padding to achieve optical balance */
+  --display1-offset: calc(var(--display1-font-size) * (var(--display1-line-height) / var(--lk-wholestep)));
+  --display2-offset: calc(var(--display2-font-size) * (var(--display2-line-height) / var(--lk-wholestep)));
+  --title1-offset: calc(var(--title1-font-size) * (var(--title1-line-height) / var(--lk-wholestep)));
+  --title2-offset: calc(var(--title2-font-size) * (var(--title2-line-height) / var(--lk-wholestep)));
+  --title3-offset: calc(var(--title3-font-size) * (var(--title3-line-height) / var(--lk-wholestep)));
+  --heading-offset: calc(var(--heading-font-size) * (var(--heading-line-height) / var(--lk-wholestep)));
+  --subheading-offset: calc(var(--subheading-font-size) * (var(--subheading-line-height) / var(--lk-wholestep)));
+  --body-offset: calc(var(--body-font-size) / var(--lk-wholestep));
+}
+```
+
+---
+
+## 5. Typography System
+
+### Font Classes
+
+LiftKit provides typography classes in three variants: regular, bold, and mono.
+
+| Class | Size | Weight | Line Height | Use Case |
+|-------|------|--------|-------------|----------|
+| `display1` | ~4.24em | 400 | 1.128 | Hero headlines |
+| `display2` | ~2.62em | 400 | 1.272 | Major headlines |
+| `title1` | ~2.06em | 400 | 1.272 | Section titles |
+| `title2` | ~1.62em | 400 | 1.272 | Subsection titles |
+| `title3` | ~1.27em | 400 | 1.272 | Card titles |
+| `heading` | ~1.13em | 600 | 1.272 | Component headings |
+| `subheading` | ~0.89em | 400 | 1.272 | Supporting text |
+| `body` | 1em | 400 | 1.618 | Body copy |
+| `callout` | ~0.94em | 400 | 1.272 | Emphasized notes |
+| `label` | ~0.84em | 600 | 1.272 | Form labels |
+| `caption` | ~0.79em | 400 | 1.272 | Captions, metadata |
+| `capline` | ~0.79em | 400 | 1.272 | All-caps labels |
+
+### Usage
+
+```tsx
+// Using className
+<p className="body">Regular body text</p>
+<p className="body-bold">Bold body text</p>
+<h1 className="display1">Hero Headline</h1>
+<span className="caption">Metadata text</span>
+<span className="capline">SECTION LABEL</span>
+
+// With spacing
+<h2 className="title2 mb-sm">Section Title</h2>
+<p className="body mb-md">Paragraph with bottom margin</p>
+```
+
+### TypeScript Types
+
+```typescript
+type LkFontClass =
+  | "display1" | "display2" | "title1" | "title2" | "title3"
+  | "heading" | "subheading" | "body" | "callout" | "label" | "caption" | "capline"
+  | "display1-bold" | "display2-bold" | "title1-bold" | "title2-bold" | "title3-bold"
+  | "heading-bold" | "subheading-bold" | "body-bold" | "callout-bold" | "label-bold"
+  | "caption-bold" | "capline-bold"
+  | "display1-mono" | "display2-mono" | "title1-mono" | "title2-mono" | "title3-mono"
+  | "heading-mono" | "subheading-mono" | "body-mono" | "callout-mono" | "label-mono"
+  | "caption-mono" | "capline-mono";
+```
+
+---
+
+## 6. Spacing System
+
+### Spacing Scale
+
+| Token | CSS Variable | Value (at 16px root) | Use Case |
+|-------|-------------|---------------------|----------|
+| `4xl` | `--lk-size-4xl` | ~177px | Page sections |
+| `3xl` | `--lk-size-3xl` | ~110px | Major sections |
+| `2xl` | `--lk-size-2xl` | ~68px | Section breaks |
+| `xl` | `--lk-size-xl` | ~42px | Component groups |
+| `lg` | `--lk-size-lg` | ~26px | Related elements |
+| `md` | `--lk-size-md` | 16px | Default spacing |
+| `sm` | `--lk-size-sm` | ~10px | Tight spacing |
+| `xs` | `--lk-size-xs` | ~6px | Minimal spacing |
+| `2xs` | `--lk-size-2xs` | ~4px | Icon gaps |
+| `3xs` | `--lk-size-3xs` | ~2px | Micro spacing |
+
+### Margin Utility Classes
+
+```css
+/* Format: m{direction}-{size} */
+
+/* All sides */
+.m-xs, .m-sm, .m-md, .m-lg, .m-xl, .m-2xl
+
+/* Top */
+.mt-2xs, .mt-xs, .mt-sm, .mt-md, .mt-lg, .mt-xl, .mt-2xl
+
+/* Right */
+.mr-2xs, .mr-xs, .mr-sm, .mr-md, .mr-lg, .mr-xl, .mr-2xl
+
+/* Bottom */
+.mb-2xs, .mb-xs, .mb-sm, .mb-md, .mb-lg, .mb-xl, .mb-2xl
+
+/* Left */
+.ml-2xs, .ml-xs, .ml-sm, .ml-md, .ml-lg, .ml-xl, .ml-2xl
+
+/* X-axis (left + right) */
+.mx-2xs, .mx-xs, .mx-sm, .mx-md, .mx-lg, .mx-xl, .mx-2xl
+
+/* Y-axis (top + bottom) */
+.my-2xs, .my-xs, .my-sm, .my-md, .my-lg, .my-xl, .my-2xl
+```
+
+### Padding Utility Classes
+
+```css
+/* Format: p{direction}-{size} */
+
+/* All sides */
+.p-0, .p-2xs, .p-xs, .p-sm, .p-md, .p-lg, .p-xl, .p-2xl, .p-3xl, .p-4xl
+
+/* Top */
+.pt-2xs, .pt-xs, .pt-sm, .pt-md, .pt-lg, .pt-xl, .pt-2xl, .pt-3xl, .pt-4xl
+
+/* Right */
+.pr-2xs, .pr-xs, .pr-sm, .pr-md, .pr-lg, .pr-xl, .pr-2xl
+
+/* Bottom */
+.pb-2xs, .pb-xs, .pb-sm, .pb-md, .pb-lg, .pb-xl, .pb-2xl, .pb-3xl, .pb-4xl
+
+/* Left */
+.pl-2xs, .pl-xs, .pl-sm, .pl-md, .pl-lg, .pl-xl, .pl-2xl, .pl-3xl, .pl-4xl
+
+/* X-axis */
+.px-2xs, .px-xs, .px-sm, .px-md, .px-lg, .px-xl, .px-2xl
+
+/* Y-axis */
+.py-2xs, .py-xs, .py-sm, .py-md, .py-lg, .py-xl, .py-2xl
+```
+
+### Gap Utility Classes
+
+```css
+.gap-3xs, .gap-2xs, .gap-xs, .gap-sm, .gap-md, .gap-lg, .gap-xl, .gap-2xl, .gap-3xl, .gap-4xl
+```
+
+---
+
+## 7. Color System
+
+### Color Philosophy
+
+**Core Principle**: Color is meaningless without context.
+
+Consider this: What does the color red mean?
+- ❤️ Love (Valentine's Day)
+- 🔥 Passion, energy
+- ⚠️ Error, danger
+- 🛑 Stop
+- 🩸 Blood, violence
+- 🎄 Christmas (with green)
+
+The same red can represent love OR rage, energy OR danger. **If something can mean anything, then it means nothing at all.**
+
+Color meaning comes from three types of context:
+
+### 1. Literal Context (Icons & Text)
+The most obvious source of meaning. When you see:
+- 🔴 + ⚠️ "Error" → Clearly an error state
+- 🔴 + ❌ "Delete" → Destructive action
+- 🔴 + ❤️ "Favorite" → Positive action!
+
+**Test:** Remove the color entirely. If the meaning is preserved through icons and text, your literal context is strong. Color then becomes *reinforcement*, not the sole carrier of meaning.
+
+### 2. UI Context (Component Type)
+The same color means different things on different components:
+
+**Red on a Snackbar:**
+> "Something negative **just happened**" (past tense)
+> The error has already occurred.
+
+**Red on a Button:**
+> "If you click this, something negative **will happen**" (future tense)
+> This is a warning about a potential action.
+
+This is why LiftKit uses **semantic** color names:
+
+| Traditional | LiftKit | Meaning |
+|------------|---------|---------|
+| `error` | `negative` | Something bad (past or future) |
+| `warning` | `tentative` | Proceed with caution, uncertain |
+| `success` | `affirmative` | Positive confirmation |
+
+**Deliberate Contradictions:**
+Sometimes you WANT to slow users down. A "self-destruct" dialog might use:
+- 🟢 Green "Cancel" button (safe action feels "go")
+- 🔴 Red "Confirm Delete" button (dangerous action feels "stop")
+
+This contradiction creates **friction**, forcing users to actually read instead of muscle-memory clicking.
+
+### 3. Cultural Context (Learned Associations)
+
+> "Your design didn't fall out of a coconut tree. It exists in the context of all the other apps your users interact with."
+
+**Traffic Lights (Universal):**
+- 🔴 Red = Stop
+- 🟡 Yellow = Caution
+- 🟢 Green = Go
+
+These associations are so deeply ingrained that macOS window buttons (🔴🟡🟢) don't even need icons - we just *know* red closes.
+
+**Industry Associations:**
+Quiz: Which restaurant sells fried chicken?
+- App A: Red + Golden Brown color scheme
+- App B: Blue + White color scheme
+- App C: Green + Brown color scheme
+
+Your brain instantly pattern-matches red + golden brown with KFC, Popeyes, Raising Cane's. This is the **"Chicken Matrix"** - color combinations trigger brand associations.
+
+**Implication:** Your color choices position your product within a mental landscape of existing products. Choose intentionally.
+
+### Building a Color System
+
+**Step 1: Start with a Seed Color**
+Your brand's primary color. Place it on the color wheel.
+
+**Step 2: Find Complementary Colors**
+- Rotate to find your accent color (tertiary)
+- Find neutral variants for secondary
+- Locate positions for red, orange, yellow, green, blue
+
+**Step 3: Harmonization**
+Raw complementary colors can clash. The algorithm adjusts saturation and lightness to ensure:
+- Sufficient contrast ratios (accessibility)
+- Visual harmony when used together
+- Readability of text on colored backgrounds
+
+**Step 4: Generate Tonal Palettes**
+Each of your 9 key colors (primary, secondary, tertiary, error, warning, success, info, neutral, neutral-variant) splits into a tonal palette:
+- 10-15 shades from light to dark
+- Includes "container" variants (muted backgrounds)
+- Includes "on-color" variants (text colors)
+
+**Step 5: Sort into Light/Dark Schemes**
+The algorithm selects appropriate tones for each scheme:
+- Light scheme: Dark text on light backgrounds
+- Dark scheme: Light text on dark backgrounds
+
+**Result:** From one seed color → Complete design system color tokens
+
+### Color Tokens
+
+```typescript
+// Colors with corresponding "on" tokens
+type LkColorWithOnToken =
+  | "primary" | "primarycontainer"
+  | "secondary" | "secondarycontainer"
+  | "tertiary" | "tertiarycontainer"
+  | "error" | "errorcontainer"
+  | "success" | "successcontainer"
+  | "warning" | "warningcontainer"
+  | "info" | "infocontainer"
+  | "background" | "surface" | "surfacevariant"
+  | "surfacecontainerlowest" | "surfacecontainerlow"
+  | "surfacecontainer" | "surfacecontainerhigh" | "surfacecontainerhighest"
+  | "inversesurface" | "transparent";
+
+// "On" tokens (text colors for backgrounds)
+type LkOnColor =
+  | "onprimary" | "onprimarycontainer"
+  | "onsecondary" | "onsecondarycontainer"
+  | "ontertiary" | "ontertiarycontainer"
+  | "onerror" | "onerrorcontainer"
+  | "onsuccess" | "onsuccesscontainer"
+  | "onwarning" | "onwarningcontainer"
+  | "oninfo" | "oninfocontainer"
+  | "onbackground" | "onsurface" | "onsurfacevariant"
+  | "inverseonsurface";
+```
+
+### Color CSS Variables
+
+```css
+:root {
+  /* Primary */
+  --lk-primary: #0051e0;
+  --lk-onprimary: #faf8ff;
+  --lk-primarycontainer: #dbe1ff;
+  --lk-onprimarycontainer: #00174d;
+  
+  /* Secondary */
+  --lk-secondary: #40617f;
+  --lk-onsecondary: #f7f9ff;
+  --lk-secondarycontainer: #cde5ff;
+  --lk-onsecondarycontainer: #001d32;
+  
+  /* Tertiary */
+  --lk-tertiary: /* complementary to primary */;
+  --lk-ontertiary: /* contrast color */;
+  
+  /* Semantic */
+  --lk-error: /* red/pink */;
+  --lk-onerror: /* contrast */;
+  --lk-warning: /* orange/yellow */;
+  --lk-onwarning: /* contrast */;
+  --lk-success: /* green */;
+  --lk-onsuccess: /* contrast */;
+  --lk-info: /* blue */;
+  --lk-oninfo: /* contrast */;
+  
+  /* Surface */
+  --lk-background: /* page background */;
+  --lk-onbackground: /* text on background */;
+  --lk-surface: /* card/component background */;
+  --lk-onsurface: /* text on surface */;
+  --lk-surfacevariant: /* alternate surface */;
+  --lk-onsurfacevariant: /* text on variant */;
+  
+  /* Outline */
+  --lk-outline: /* borders */;
+  --lk-outlinevariant: /* subtle borders */;
+}
+```
+
+### Background Color Classes
+
+```css
+/* Format: bg-{colorToken} */
+.bg-primary          /* background: var(--lk-primary); color: var(--lk-onprimary); */
+.bg-primarycontainer /* background: var(--lk-primarycontainer); color: var(--lk-onprimarycontainer); */
+.bg-secondary
+.bg-secondarycontainer
+.bg-tertiary
+.bg-tertiarycontainer
+.bg-error
+.bg-errorcontainer
+.bg-success
+.bg-successcontainer
+.bg-warning
+.bg-warningcontainer
+.bg-surface
+.bg-surfacecontainer
+.bg-background
+```
+
+### Text Color Classes
+
+```css
+/* Format: color-{colorToken} */
+.color-primary
+.color-onprimary
+.color-secondary
+.color-onsecondary
+.color-tertiary
+.color-error
+.color-success
+.color-warning
+.color-onsurface
+.color-onsurfacevariant
+```
+
+---
+
+## 8. Component Library
+
+### Button
+
+```tsx
+import Button from "@/components/button";
+
+interface LkButtonProps {
+  label?: string;                              // Default: "Button"
+  variant?: "fill" | "outline" | "text";       // Default: "fill"
+  color?: LkColorWithOnToken;                  // Default: "primary"
+  size?: "sm" | "md" | "lg";                   // Default: "md"
+  startIcon?: IconName;                        // Lucide icon name
+  endIcon?: IconName;                          // Lucide icon name
+  opticIconShift?: boolean;                    // Default: true
+  modifiers?: string;                          // Additional classes
+}
+
+// Examples
+<Button label="Submit" />
+<Button label="Cancel" variant="outline" />
+<Button label="Delete" color="error" />
+<Button label="Continue" endIcon="arrow-right" />
+<Button label="Back" startIcon="arrow-left" variant="text" />
+<Button label="Small" size="sm" />
+<Button label="Large" size="lg" />
+```
+
+**Button CSS Formulas:**
+```css
+[data-lk-component="button"] {
+  --button-font-size: var(--body-font-size);
+  --button-line-height: var(--lk-halfstep);
+  --button-padX: var(--button-font-size);                                    /* 1em */
+  --button-padY: calc(var(--button-font-size) * (var(--lk-halfstep) / var(--lk-size-xl-unitless)));
+  --button-padX-sideWithIcon: calc(var(--button-font-size) / var(--lk-wholestep));  /* Reduced when icon present */
+  --button-gap: calc(var(--button-padY) / var(--lk-eighthstep));
+  
+  border-radius: 100em;  /* Pill shape */
+}
+```
+
+**Why Asymmetric Button Padding?**
+```
+Button icons create an optical illusion of extra padding on the icon side,
+even when padding is mathematically equal. LiftKit compensates:
+
+Standard padding:          With icon (compensated):
+┌──────────────────────┐   ┌──────────────────────┐
+│  1em  [Button]  1em  │   │ 0.62em [→] [Button] 1em │
+└──────────────────────┘   └──────────────────────┘
+                           ↑ Reduced on icon side
+```
+
+**Button Comparison (LiftKit vs Others):**
+When you draw a bounding circle around button content:
+- **LiftKit**: Content fits snugly within the circle
+- **iOS/Material**: Extra dead space around content
+
+This "tightness" is what creates the satisfying, polished feel.
+
+### IconButton
+
+```tsx
+import IconButton from "@/components/icon-button";
+
+interface LkIconButtonProps {
+  icon: IconName;                              // Required: Lucide icon name
+  variant?: "fill" | "outline" | "text";       // Default: "fill"
+  color?: LkColorWithOnToken;                  // Default: "primary"
+  size?: "xs" | "sm" | "md" | "lg" | "xl";    // Default: "md"
+  fontClass?: LkFontClass;                     // Controls icon size
+}
+
+// Examples
+<IconButton icon="settings" />
+<IconButton icon="close" variant="text" color="onsurface" />
+<IconButton icon="delete" color="error" />
+<IconButton icon="menu" size="lg" />
+```
+
+### Card
+
+```tsx
+import Card from "@/components/card";
+
+interface LkCardProps {
+  scaleFactor?: LkFontClass | "none";          // Default: "body" - determines padding
+  variant?: "fill" | "outline" | "transparent"; // Default: "fill"
+  material?: "flat" | "glass";                 // Default: "flat"
+  opticalCorrection?: "top" | "left" | "right" | "bottom" | "x" | "y" | "all" | "none";
+  isClickable?: boolean;
+  bgColor?: LkColorWithOnToken | "transparent";
+  isScrollable?: boolean;
+  children?: React.ReactNode;
+}
+
+// Examples
+<Card>
+  <h3 className="title3-bold mb-xs">Card Title</h3>
+  <p className="body">Card content</p>
+</Card>
+
+<Card scaleFactor="title2" opticalCorrection="top">
+  <h2 className="title2-bold">Large Title Card</h2>
+  <p className="body">Content with optical correction</p>
+</Card>
+
+<Card variant="outline" material="glass">
+  <p className="body">Glassmorphism card</p>
+</Card>
+```
+
+**Card Padding Formula:**
+```
+padding = largest-child-font-size (all sides)
+padding-top (with optical correction) = font-size / line-height
+
+Example for title2:
+- Default padding: 1.618em (all sides)
+- Optically corrected top: 1.618em / 1.272 ≈ 1.272em
+```
+
+### Snackbar
+
+```tsx
+import Snackbar from "@/components/snackbar";
+
+interface LkSnackbarProps {
+  globalColor?: LkColorWithOnToken;
+  message?: string;                            // Default: "Notification text goes here."
+  children?: React.ReactNode;                  // Badge, Button, Icon, IconButton, Text only
+}
+
+// Examples
+<Snackbar message="Changes saved successfully" globalColor="success" />
+
+<Snackbar message="Delete this item?" globalColor="error">
+  <Button label="Undo" variant="text" />
+</Snackbar>
+```
+
+### MenuItem
+
+```tsx
+import MenuItem from "@/components/menu-item";
+
+interface LkMenuItemProps {
+  startIcon?: LkIconProps;
+  endIcon?: LkIconProps;
+  fontClass?: LkFontClass;                     // Default: "body"
+  children?: React.ReactNode;
+  onClick?: React.MouseEventHandler;
+}
+
+// Examples
+<MenuItem startIcon={{ name: "home" }}>Home</MenuItem>
+<MenuItem startIcon={{ name: "settings" }} endIcon={{ name: "chevron-right" }}>
+  Settings
+</MenuItem>
+```
+
+### Icon
+
+```tsx
+import Icon from "@/components/icon";
+
+interface LkIconProps {
+  name: IconName;                              // Lucide icon name
+  color?: LkColor;
+  strokeWidth?: number;                        // Default varies by fontClass
+  fontClass?: LkFontClass;                     // Controls size
+}
+
+// Icon sizes scale with typography
+<Icon name="star" fontClass="body" />      // 1em × 1.272 aspect
+<Icon name="star" fontClass="title2" />    // Larger
+<Icon name="star" fontClass="caption" />   // Smaller
+```
+
+### Heading
+
+```tsx
+import Heading from "@/components/heading";
+
+interface LkHeadingProps {
+  tag?: "h1" | "h2" | "h3" | "h4" | "h5" | "h6";  // Default: "h2"
+  fontClass?: string;                             // Default: "display2-bold"
+  fontColor?: string;
+  children?: React.ReactNode;
+}
+
+// Examples
+<Heading tag="h1" fontClass="display1-bold">Page Title</Heading>
+<Heading tag="h2" fontClass="title1-bold">Section Title</Heading>
+<Heading fontColor="primary">Colored Heading</Heading>
+```
+
+---
+
+## 9. Utility Classes
+
+### Flexbox
+
+```css
+/* Display */
+.flex-h              /* display: flex; */
+.flex-v              /* display: flex; flex-direction: column; */
+
+/* Direction */
+.flex-row            /* flex-direction: row; */
+.flex-row-reverse    /* flex-direction: row-reverse; */
+.flex-col            /* flex-direction: column; */
+.flex-col-reverse    /* flex-direction: column-reverse; */
+
+/* Wrap */
+.flex-wrap           /* flex-wrap: wrap; */
+.flex-nowrap         /* flex-wrap: nowrap; */
+
+/* Grow/Shrink */
+.flex-grow           /* flex-grow: 1; */
+.flex-shrink         /* flex-shrink: 1; */
+.flex-auto           /* flex: 1 1 auto; */
+.flex-none           /* flex: none; */
+
+/* Alignment Shortcuts */
+.flex-h-start        /* flex, align-items: flex-start, justify-content: flex-start */
+.flex-h-center       /* flex, align-items: center, justify-content: center */
+.flex-h-end          /* flex, justify-content: flex-end */
+.flex-v-start        /* flex column, align-items: flex-start */
+.flex-v-center       /* flex column, centered both axes */
+.flex-v-end          /* flex column, align-items: flex-end */
+
+/* Child Sizing */
+.fill-container      /* flex: 1 0 0; */
+.hug-contents        /* flex: 1 0 auto; */
+```
+
+### Alignment
+
+```css
+/* align-items */
+.items-stretch       /* align-items: stretch; */
+.items-center        /* align-items: center; */
+.items-start         /* align-items: flex-start; */
+.items-end           /* align-items: flex-end; */
+.items-baseline      /* align-items: baseline; */
+```
+
+### Text Utilities
+
+```css
+.weight-400          /* font-weight: 400; */
+.italic              /* font-style: italic; */
+.mono                /* font-family: monospace; */
+.is-link             /* cursor: pointer; hover opacity effect */
+```
+
+---
+
+## 10. Layout Components
+
+### Row
+
+```tsx
+import Row from "@/components/row";
+
+interface LkRowProps {
+  alignItems?: "start" | "center" | "end" | "stretch";
+  justifyContent?: "start" | "center" | "end" | "space-between" | "space-around";
+  gap?: "3xs" | "2xs" | "xs" | "sm" | "md" | "lg" | "xl" | "2xl" | "3xl" | "4xl";
+  wrapChildren?: boolean;
+  defaultChildBehavior?: "auto-grow" | "auto-shrink" | "ignoreFlexRules" | "ignoreIntrinsicSize";
+  children?: React.ReactNode;
+}
+
+// Examples
+<Row alignItems="center" gap="sm">
+  <Icon name="star" />
+  <span>Label</span>
+</Row>
+
+<Row justifyContent="space-between" alignItems="center">
+  <span className="title3-bold">Title</span>
+  <Button label="Action" />
+</Row>
+```
+
+### Column
+
+```tsx
+import Column from "@/components/column";
+
+interface LkColumnProps {
+  alignItems?: "start" | "center" | "end" | "stretch";
+  justifyContent?: "start" | "center" | "end" | "space-between" | "space-around";
+  gap?: "3xs" | "2xs" | "xs" | "sm" | "md" | "lg" | "xl" | "2xl" | "3xl" | "4xl";
+  children?: React.ReactNode;
+}
+
+// Examples
+<Column gap="md">
+  <h2 className="title2-bold">Section</h2>
+  <p className="body">Content paragraph one.</p>
+  <p className="body">Content paragraph two.</p>
+</Column>
+
+<Column alignItems="center" gap="lg">
+  <Icon name="check-circle" fontClass="display2" />
+  <span className="title3">Success!</span>
+</Column>
+```
+
+### Section
+
+```tsx
+import Section from "@/components/section";
+
+interface LkSectionProps {
+  padding?: "xs" | "sm" | "md" | "lg" | "xl" | "none";
+  px?: SpacingSize;    // Horizontal padding
+  py?: SpacingSize;    // Vertical padding
+  pt?: SpacingSize;    // Padding top
+  pb?: SpacingSize;    // Padding bottom
+  pl?: SpacingSize;    // Padding left
+  pr?: SpacingSize;    // Padding right
+  children?: React.ReactNode;
+}
+
+// Section spacing maps to larger values:
+// xs → lg, sm → xl, md → 2xl, lg → 3xl, xl → 4xl
+
+// Examples
+<Section padding="md">
+  <h1 className="display2-bold mb-lg">Page Title</h1>
+  <p className="body">Content...</p>
+</Section>
+
+<Section py="lg" px="md">
+  <Row>...</Row>
+</Section>
+```
+
+### Grid
+
+```tsx
+import Grid from "@/components/grid";
+
+interface LkGridProps {
+  columns?: number;                            // Fixed column count
+  gap?: "3xs" | "2xs" | "xs" | "sm" | "md" | "lg" | "xl" | "2xl" | "3xl" | "4xl";
+  minmax?: boolean;                            // Enable responsive minmax
+  minmaxMaxWidth?: SpacingSize;               // Max width for minmax columns
+  autoResponsive?: boolean;                    // Collapse to 1 column on mobile
+  children?: React.ReactNode;
+}
+
+// Examples
+<Grid columns={3} gap="md">
+  <Card>Item 1</Card>
+  <Card>Item 2</Card>
+  <Card>Item 3</Card>
+</Grid>
+
+<Grid minmax autoResponsive gap="lg">
+  <Card>Responsive item 1</Card>
+  <Card>Responsive item 2</Card>
+  <Card>Responsive item 3</Card>
+</Grid>
+```
+
+---
+
+## 11. Code Examples
+
+### Example 1: User Profile Card
+
+```tsx
+import Card from "@/components/card";
+import Row from "@/components/row";
+import Column from "@/components/column";
+import Button from "@/components/button";
+import Icon from "@/components/icon";
+
+function UserProfileCard({ user }) {
+  return (
+    <Card scaleFactor="title3" opticalCorrection="top">
+      <Row alignItems="center" gap="md" className="mb-md">
+        <div className="bg-primarycontainer p-sm" style={{ borderRadius: '100%' }}>
+          <Icon name="user" color="onprimarycontainer" fontClass="title2" />
+        </div>
+        <Column gap="2xs">
+          <span className="title3-bold">{user.name}</span>
+          <span className="caption color-onsurfacevariant">{user.email}</span>
+        </Column>
+      </Row>
+      
+      <p className="body mb-md">{user.bio}</p>
+      
+      <Row gap="sm">
+        <Button label="Message" startIcon="message-circle" />
+        <Button label="Follow" variant="outline" />
+      </Row>
+    </Card>
+  );
+}
+```
+
+### Example 2: Settings Menu
+
+```tsx
+import Card from "@/components/card";
+import MenuItem from "@/components/menu-item";
+import Column from "@/components/column";
+
+function SettingsMenu() {
+  return (
+    <Card scaleFactor="body" variant="outline">
+      <Column>
+        <span className="capline color-onsurfacevariant mb-sm">ACCOUNT</span>
+        
+        <MenuItem 
+          startIcon={{ name: "user" }}
+          endIcon={{ name: "chevron-right" }}
+        >
+          Profile
+        </MenuItem>
+        
+        <MenuItem 
+          startIcon={{ name: "bell" }}
+          endIcon={{ name: "chevron-right" }}
+        >
+          Notifications
+        </MenuItem>
+        
+        <MenuItem 
+          startIcon={{ name: "shield" }}
+          endIcon={{ name: "chevron-right" }}
+        >
+          Privacy
+        </MenuItem>
+        
+        <div className="my-md" style={{ borderTop: '1px solid var(--lk-outlinevariant)' }} />
+        
+        <span className="capline color-onsurfacevariant mb-sm">DANGER ZONE</span>
+        
+        <MenuItem 
+          startIcon={{ name: "trash-2", color: "error" }}
+          className="color-error"
+        >
+          Delete Account
+        </MenuItem>
+      </Column>
+    </Card>
+  );
+}
+```
+
+### Example 3: Feature Section
+
+```tsx
+import Section from "@/components/section";
+import Grid from "@/components/grid";
+import Card from "@/components/card";
+import Column from "@/components/column";
+import Icon from "@/components/icon";
+
+function FeaturesSection() {
+  const features = [
+    { icon: "zap", title: "Fast", description: "Lightning-quick performance" },
+    { icon: "shield", title: "Secure", description: "Enterprise-grade security" },
+    { icon: "heart", title: "Loved", description: "Trusted by thousands" },
+  ];
+
+  return (
+    <Section py="xl" px="md" className="bg-surfacecontainer">
+      <Column alignItems="center" gap="lg" className="mb-2xl">
+        <span className="capline color-primary">FEATURES</span>
+        <h2 className="display2-bold">Why Choose Us</h2>
+        <p className="body color-onsurfacevariant" style={{ maxWidth: '600px', textAlign: 'center' }}>
+          Everything you need to build amazing products.
+        </p>
+      </Column>
+      
+      <Grid columns={3} gap="lg" autoResponsive>
+        {features.map((feature) => (
+          <Card key={feature.title} scaleFactor="heading" opticalCorrection="top">
+            <Column gap="sm">
+              <div className="bg-primarycontainer p-sm" style={{ borderRadius: 'var(--lk-size-xs)', width: 'fit-content' }}>
+                <Icon name={feature.icon} color="onprimarycontainer" fontClass="title3" />
+              </div>
+              <h3 className="heading-bold">{feature.title}</h3>
+              <p className="body color-onsurfacevariant">{feature.description}</p>
+            </Column>
+          </Card>
+        ))}
+      </Grid>
+    </Section>
+  );
+}
+```
+
+### Example 4: Form with Proper Spacing
+
+```tsx
+import Card from "@/components/card";
+import Column from "@/components/column";
+import Row from "@/components/row";
+import Button from "@/components/button";
+
+function ContactForm() {
+  return (
+    <Card scaleFactor="title3" opticalCorrection="y">
+      <Column gap="lg">
+        <Column gap="2xs">
+          <h2 className="title3-bold">Contact Us</h2>
+          <p className="body color-onsurfacevariant">We'd love to hear from you.</p>
+        </Column>
+        
+        <Column gap="md">
+          {/* Name field */}
+          <Column gap="xs">
+            <label className="label-bold">Name</label>
+            <input 
+              type="text" 
+              className="body p-sm"
+              style={{ 
+                border: '1px solid var(--lk-outlinevariant)',
+                borderRadius: 'var(--lk-size-xs)',
+                background: 'var(--lk-surfacecontainer)'
+              }}
+            />
+          </Column>
+          
+          {/* Email field */}
+          <Column gap="xs">
+            <label className="label-bold">Email</label>
+            <input 
+              type="email" 
+              className="body p-sm"
+              style={{ 
+                border: '1px solid var(--lk-outlinevariant)',
+                borderRadius: 'var(--lk-size-xs)',
+                background: 'var(--lk-surfacecontainer)'
+              }}
+            />
+          </Column>
+          
+          {/* Message field */}
+          <Column gap="xs">
+            <label className="label-bold">Message</label>
+            <textarea 
+              className="body p-sm"
+              rows={4}
+              style={{ 
+                border: '1px solid var(--lk-outlinevariant)',
+                borderRadius: 'var(--lk-size-xs)',
+                background: 'var(--lk-surfacecontainer)'
+              }}
+            />
+          </Column>
+        </Column>
+        
+        <Row gap="sm" justifyContent="end">
+          <Button label="Cancel" variant="text" />
+          <Button label="Send Message" startIcon="send" />
+        </Row>
+      </Column>
+    </Card>
+  );
+}
+```
+
+---
+
+## 12. Decision Trees
+
+### Choosing Spacing Size
+
+```
+What is the relationship between elements?
+│
+├─ Same logical unit (title + subtitle)?
+│  └─ Use: xs or 2xs
+│
+├─ Parent-child (heading + content)?
+│  └─ Use: sm
+│
+├─ Siblings in same container?
+│  └─ Use: md
+│
+├─ Different functional groups?
+│  └─ Use: lg or xl
+│
+└─ Separate sections?
+   └─ Use: 2xl, 3xl, or 4xl
+```
+
+### Choosing Typography Class
+
+```
+What is the content?
+│
+├─ Hero/landing page headline?
+│  └─ display1 or display1-bold
+│
+├─ Major page section title?
+│  └─ display2 or display2-bold
+│
+├─ Section heading?
+│  └─ title1, title2, or title3 (+ bold)
+│
+├─ Component/card heading?
+│  └─ heading or heading-bold
+│
+├─ Main body text?
+│  └─ body
+│
+├─ Supporting/secondary text?
+│  └─ subheading or callout
+│
+├─ Form labels?
+│  └─ label or label-bold
+│
+├─ Metadata/timestamps?
+│  └─ caption
+│
+└─ Category labels/tags?
+   └─ capline (uppercase)
+```
+
+### Choosing Card scaleFactor
+
+```
+What is the largest text in the card?
+│
+├─ display1 or display2?
+│  └─ scaleFactor="display1" or "display2"
+│
+├─ title1, title2, title3?
+│  └─ scaleFactor="title1", "title2", or "title3"
+│
+├─ heading?
+│  └─ scaleFactor="heading"
+│
+├─ body (most common)?
+│  └─ scaleFactor="body" (default)
+│
+└─ Smaller text (caption, label)?
+   └─ scaleFactor="caption" or "label"
+```
+
+### Choosing Button Variant
+
+```
+What action does the button perform?
+│
+├─ Primary/main action?
+│  └─ variant="fill" (default)
+│
+├─ Secondary/alternative action?
+│  └─ variant="outline"
+│
+├─ Tertiary/subtle action?
+│  └─ variant="text"
+│
+├─ Destructive action?
+│  └─ variant="fill" color="error"
+│     or variant="outline" color="error"
+│
+└─ In a card/tight space?
+   └─ Consider size="sm"
+```
+
+### When to Use Optical Correction
+
+```
+Is there visible whitespace imbalance?
+│
+├─ Top of card feels "too padded"?
+│  └─ opticalCorrection="top"
+│
+├─ Both top and bottom?
+│  └─ opticalCorrection="y"
+│
+├─ Left/right sides feel off?
+│  └─ opticalCorrection="x"
+│
+├─ All sides need adjustment?
+│  └─ opticalCorrection="all"
+│
+└─ Looks fine as-is?
+   └─ opticalCorrection="none" (default)
+```
+
+---
+
+## Quick Reference Card
+
+### Spacing Multipliers
+```
+4xl = φ⁵ ≈ 11.09    3xl = φ⁴ ≈ 6.85     2xl = φ³ ≈ 4.24
+xl  = φ² ≈ 2.62     lg  = φ  ≈ 1.62     md  = 1
+sm  = 1/φ ≈ 0.62    xs  = 1/φ² ≈ 0.38   2xs = 1/φ³ ≈ 0.24
+```
+
+### Typography Sizes (at 16px root)
+```
+display1 ≈ 68px    display2 ≈ 42px    title1 ≈ 33px
+title2   ≈ 26px    title3   ≈ 20px    heading ≈ 18px
+body     = 16px    subhead  ≈ 14px    caption ≈ 13px
+```
+
+### Key Formulas
+```
+Button padY = fontSize × (halfstep / xl)
+Button padX-with-icon = fontSize / wholestep
+Card padding = largest-child-font-size
+Card optical-top = fontSize / lineHeight
+Icon size = 1em × halfstep (square)
+```
+
+### Import Pattern
+```tsx
+import Button from "@/components/button";
+import Card from "@/components/card";
+import Column from "@/components/column";
+import Row from "@/components/row";
+import Icon from "@/components/icon";
+import Section from "@/components/section";
+import Grid from "@/components/grid";
+import Heading from "@/components/heading";
+import MenuItem from "@/components/menu-item";
+import IconButton from "@/components/icon-button";
+import Snackbar from "@/components/snackbar";
+```
+
+---
+
+*Document Version: 2.0*
+*Based on LiftKit by Chainlift (chainlift.io)*
+
+- LiftKit GitHub Repository (Chainlift/liftkit)
+- chainlift.io/liftkit documentation
+
+**This document serves dual purposes:**
+1. **Design Theory Guide** - Understanding the "why" behind spacing, typography, and color decisions
+2. **Implementation Reference** - Concrete code examples, CSS variables, and component APIs for building LiftKit-compliant React applications
+
+**Resources:**
+- LiftKit Documentation: chainlift.io/liftkit
+- Figma Kit: figma.com/community (search "LiftKit")
+- GitHub: github.com/Chainlift/liftkit
+- Chainlift Color Tool: chainlift.io/color
