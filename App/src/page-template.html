@@ -328,7 +328,13 @@
   }
 
   @media (max-width: 700px){
-    .scene .ann{ display:none; }
+    /* keep the register + savings pill (the animation's payoff); the finer
+       load/measurement callouts crop off-canvas on mobile so stay hidden */
+    .scene .load, .scene .dim-label{ display:none; }
+    /* they render right of the building by default, which clips at the
+       mobile crop edge — shift left of the building into the open ground
+       (translate composes with the elements' own animated transforms) */
+    .scene .reg-cap, .scene .reg-row, .scene .savings{ translate:-356px 0; }
     /* pan the crop toward the site so the building stays in view */
     .scene-holder{ margin-top:0; overflow:hidden; }
     .scene{ width:856px; height:380px; margin-left:calc((100vw - 856px) * .62); }
